@@ -1,23 +1,7 @@
-"""
-NEUROTOM — MVP
-Triangular Infinite Spiral Observation
+from flask import Flask, render_template_string
+import os
 
-MVP v0.1
-
-Core idea:
-    Fixed triangular topology:
-            A
-           / \
-          /   \
-         B-----C
-
-    Coupled computational configuration:
-        A → B → C → A
-
-The goal of this MVP is to establish the basic state-transition
-mechanism before introducing neural networks, large-scale memory,
-or hardware.
-"""
+app = Flask(__name__)
 
 
 class Node:
@@ -25,7 +9,6 @@ class Node:
         self.name = name
 
     def compute(self, state):
-        """Process the current computational state."""
         return {
             "node": self.name,
             "input": state,
@@ -33,16 +16,11 @@ class Node:
         }
 
     def observe(self, computation):
-        """Observe the previous node's computational state."""
         return {
             "observer": self.name,
             "observed": computation
         }
 
-
-# ------------------------------------------------------------
-# 1. CREATE THE THREE NODES
-# ------------------------------------------------------------
 
 A = Node("A")
 B = Node("B")
@@ -51,48 +29,132 @@ C = Node("C")
 nodes = [A, B, C]
 
 
-# ------------------------------------------------------------
-# 2. INITIAL COMPUTATIONAL STATE
-# ------------------------------------------------------------
+def run_spiral():
 
-state = {
-    "engram": "tuna",
-    "history": []
-}
-
-
-# ------------------------------------------------------------
-# 3. TRIANGULAR SPIRAL
-# ------------------------------------------------------------
-
-for step in range(9):
-
-    current = nodes[step % 3]
-    next_node = nodes[(step + 1) % 3]
-    witness = nodes[(step + 2) % 3]
-
-    # Current node performs computation.
-    computation = current.compute(state)
-
-    # Next node observes the current computation.
-    realization = next_node.observe(computation)
-
-    # The observed/realized state becomes part of the
-    # next computational state.
     state = {
-        "previous": state,
-        "computation": computation,
-        "realization": realization
+        "engram": "tuna",
+        "history": []
     }
 
-    print(
-        f"Step {step + 1}: "
-        f"{current.name} → {next_node.name} → {witness.name}"
+    steps = []
+
+    for step in range(9):
+
+        current = nodes[step % 3]
+        next_node = nodes[(step + 1) % 3]
+        witness = nodes[(step + 2) % 3]
+
+        computation = current.compute(state)
+        realization = next_node.observe(computation)
+
+        state = {
+            "previous": state,
+            "computation": computation,
+            "realization": realization
+        }
+
+        steps.append({
+            "step": step + 1,
+            "current": current.name,
+            "observer": next_node.name,
+            "witness": witness.name
+        })
+
+    return steps
+
+
+@app.route("/")
+def index():
+
+    steps = run_spiral()
+
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Neurotom MVP</title>
+
+        <style>
+            body {
+                font-family: monospace;
+                max-width: 800px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #111;
+                color: #eee;
+            }
+
+            h1 {
+                color: #00ff88;
+            }
+
+            .step {
+                padding: 10px;
+                margin: 6px 0;
+                background: #1c1c1c;
+                border-left: 3px solid #00ff88;
+            }
+
+            .triangle {
+                font-size: 28px;
+                text-align: center;
+                margin: 30px;
+                line-height: 1.8;
+            }
+
+            .status {
+                color: #00ff88;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <h1>NEUROTOM</h1>
+
+        <p class="status">
+            ● MVP v0.1 — RUNNING
+        </p>
+
+        <div class="triangle">
+                A
+               / \\
+              /   \\
+             B-----C
+        </div>
+
+        <h2>Triangular Infinite Spiral</h2>
+
+        <p>
+            Fixed topology:
+            <strong>A → B → C → A</strong>
+        </p>
+
+        <h2>Execution</h2>
+
+        {% for step in steps %}
+        <div class="step">
+            Step {{ step.step }}:
+            {{ step.current }}
+            →
+            {{ step.observer }}
+            →
+            {{ step.witness }}
+        </div>
+        {% endfor %}
+
+    </body>
+    </html>
+    """
+
+    return render_template_string(html, steps=steps)
+
+
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 5000))
+
+    app.run(
+        host="0.0.0.0",
+        port=port
     )
-
-
-# ------------------------------------------------------------
-# END
-# ------------------------------------------------------------
-
-print("\nNeurotom MVP completed.")
